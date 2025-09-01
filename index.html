@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural Connection Design Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #f8fafc;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2563eb;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: #4b5563;
+            margin-top: 1.5rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        input, select {
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .formula-box {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .result-box {
+            background: #ecfdf5;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .result-box.warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+
+        .result-box.danger {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+
+        .result-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-status {
+            font-weight: 500;
+        }
+
+        .safe { color: #10b981; }
+        .warning { color: #f59e0b; }
+        .unsafe { color: #ef4444; }
+
+        sub {
+            font-size: 0.8em;
+            vertical-align: sub;
+        }
+
+        .math {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Structural Connection Design Calculator</h1>
+        
+         Member Properties Section 
+        <div class="section">
+            <h2>Member Properties</h2>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="sectionName">Section Name</label>
+                    <input type="text" id="sectionName" value="W21X83">
+                </div>
+                <div class="input-group">
+                    <label for="material">Material</label>
+                    <select id="material">
+                        <option value="a992">A992</option>
+                        <option value="a36">A36</option>
+                        <option value="a572">A572</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="length">Length (ft)</label>
+                    <input type="number" id="length" value="25" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="role">Role</label>
+                    <select id="role">
+                        <option value="BEAM">BEAM</option>
+                        <option value="COLUMN">COLUMN</option>
+                        <option value="BRACE">BRACE</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+         Global Loads Section 
+        <div class="section">
+            <h2>Global Loads</h2>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="fx">F<sub>x</sub> (kip)</label>
+                    <input type="number" id="fx" value="0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="fy">F<sub>y</sub> (kip)</label>
+                    <input type="number" id="fy" value="50" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="fz">F<sub>z</sub> (kip)</label>
+                    <input type="number" id="fz" value="0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="mx">M<sub>x</sub> (kip-ft)</label>
+                    <input type="number" id="mx" value="0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="my">M<sub>y</sub> (kip-ft)</label>
+                    <input type="number" id="my" value="0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="mz">M<sub>z</sub> (kip-ft)</label>
+                    <input type="number" id="mz" value="0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="directLoad">Direct Load (kip)</label>
+                    <input type="number" id="directLoad" value="75" step="0.1">
+                </div>
+            </div>
+        </div>
+
+         Connection Properties Section 
+        <div class="section">
+            <h2>Bolted Connection Properties</h2>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="rowSpacing">Row Spacing (in)</label>
+                    <input type="number" id="rowSpacing" value="3.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="columnSpacing">Column Spacing (in)</label>
+                    <input type="number" id="columnSpacing" value="3.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="nRows">Number of Rows</label>
+                    <input type="number" id="nRows" value="2" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="nColumns">Number of Columns</label>
+                    <input type="number" id="nColumns" value="7" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="edgeDistanceV">Edge Distance Vertical (in)</label>
+                    <input type="number" id="edgeDistanceV" value="2.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="edgeDistanceH">Edge Distance Horizontal (in)</label>
+                    <input type="number" id="edgeDistanceH" value="1.5" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="boltDiameter">Bolt Diameter (in)</label>
+                    <input type="number" id="boltDiameter" value="0.875" step="0.125">
+                </div>
+                <div class="input-group">
+                    <label for="boltGrade">Bolt Grade</label>
+                    <select id="boltGrade">
+                        <option value="a325_x">A325-X</option>
+                        <option value="a325_n">A325-N</option>
+                        <option value="a490_x">A490-X</option>
+                        <option value="a490_n">A490-N</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="angle">Angle (degrees)</label>
+                    <input type="number" id="angle" value="47.2" step="0.1">
+                </div>
+            </div>
+        </div>
+
+         Design Formulas Section 
+        <div class="section">
+            <h2>Design Formulas</h2>
+            
+            <h3>Bolt Shear Capacity</h3>
+            <div class="formula-box">
+                <span class="math">V<sub>r</sub> = n × 0.6 × F<sub>u</sub> × (πd²/4) × (1/γ<sub>s</sub>)</span>
+            </div>
+            <p>Where: n = number of bolts, F<sub>u</sub> = ultimate tensile strength, d = bolt diameter, γ<sub>s</sub> = safety factor</p>
+            
+            <h3>Bolt Tensile Capacity</h3>
+            <div class="formula-box">
+                <span class="math">T<sub>r</sub> = n × 0.75 × F<sub>u</sub> × A<sub>s</sub> × (1/γ<sub>s</sub>)</span>
+            </div>
+            <p>Where: A<sub>s</sub> = stress area of bolt thread</p>
+            
+            <h3>Bearing Capacity</h3>
+            <div class="formula-box">
+                <span class="math">B<sub>r</sub> = 2.4 × d × t × F<sub>u</sub> × (1/γ<sub>s</sub>)</span>
+            </div>
+            <p>Where: t = plate thickness, F<sub>u</sub> = ultimate strength of connected material</p>
+            
+            <h3>Block Shear Capacity</h3>
+            <div class="formula-box">
+                <span class="math">V<sub>bs</sub> = min(0.6F<sub>u</sub>A<sub>nv</sub> + F<sub>u</sub>A<sub>nt</sub>, 0.6F<sub>y</sub>A<sub>gv</sub> + F<sub>u</sub>A<sub>nt</sub>) × (1/γ<sub>s</sub>)</span>
+            </div>
+            <p>Where: A<sub>nv</sub> = net shear area, A<sub>nt</sub> = net tension area, A<sub>gv</sub> = gross shear area</p>
+        </div>
+
+         Results Section 
+        <div class="section">
+            <h2>Calculation Results</h2>
+            
+            <div id="boltShearResult" class="result-box">
+                <div class="result-value">Bolt Shear Capacity: <span id="boltShearValue">0</span> kip</div>
+                <div class="result-status">Status: <span id="boltShearStatus" class="safe">SAFE</span></div>
+            </div>
+            
+            <div id="boltTensileResult" class="result-box">
+                <div class="result-value">Bolt Tensile Capacity: <span id="boltTensileValue">0</span> kip</div>
+                <div class="result-status">Status: <span id="boltTensileStatus" class="safe">SAFE</span></div>
+            </div>
+            
+            <div id="bearingResult" class="result-box">
+                <div class="result-value">Bearing Capacity: <span id="bearingValue">0</span> kip</div>
+                <div class="result-status">Status: <span id="bearingStatus" class="safe">SAFE</span></div>
+            </div>
+            
+            <div id="blockShearResult" class="result-box">
+                <div class="result-value">Block Shear Capacity: <span id="blockShearValue">0</span> kip</div>
+                <div class="result-status">Status: <span id="blockShearStatus" class="safe">SAFE</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Material properties
+        const materials = {
+            a992: { fy: 50, fu: 65 },
+            a36: { fy: 36, fu: 58 },
+            a572: { fy: 50, fu: 65 }
+        };
+
+        // Bolt properties
+        const boltGrades = {
+            a325_x: { fu: 120 },
+            a325_n: { fu: 120 },
+            a490_x: { fu 150 },
+            a490_n: { fu: 150 }
+        };
+
+        function calculateCapacities() {
+            // Get input values
+            const material = document.getElementById('material').value;
+            const boltGrade = document.getElementById('boltGrade').value;
+            const boltDiameter = parseFloat(document.getElementById('boltDiameter').value);
+            const nRows = parseInt(document.getElementById('nRows').value);
+            const nColumns = parseInt(document.getElementById('nColumns').value);
+            const directLoad = parseFloat(document.getElementById('directLoad').value);
+            
+            const nBolts = nRows * nColumns;
+            const boltArea = Math.PI * Math.pow(boltDiameter, 2) / 4;
+            const stressArea = 0.7854 * Math.pow(boltDiameter - 0.9743 / 13, 2); // Approximate stress area
+            const plateThickness = 0.5; // Assumed plate thickness
+            const safetyFactor = 2.0;
+            
+            const matProps = materials[material];
+            const boltProps = boltGrades[boltGrade];
+            
+            // Calculate capacities
+            const boltShearCapacity = nBolts * 0.6 * boltProps.fu * boltArea / safetyFactor;
+            const boltTensileCapacity = nBolts * 0.75 * boltProps.fu * stressArea / safetyFactor;
+            const bearingCapacity = 2.4 * boltDiameter * plateThickness * matProps.fu / safetyFactor;
+            const blockShearCapacity = 0.6 * matProps.fu * (nBolts * boltArea) / safetyFactor;
+            
+            // Update results
+            updateResult('boltShear', boltShearCapacity, directLoad);
+            updateResult('boltTensile', boltTensileCapacity, directLoad);
+            updateResult('bearing', bearingCapacity, directLoad);
+            updateResult('blockShear', blockShearCapacity, directLoad);
+        }
+
+        function updateResult(type, capacity, demand) {
+            const valueElement = document.getElementById(type + 'Value');
+            const statusElement = document.getElementById(type + 'Status');
+            const resultBox = document.getElementById(type + 'Result');
+            
+            valueElement.textContent = capacity.toFixed(1);
+            
+            const ratio = demand / capacity;
+            
+            if (ratio < 0.8) {
+                statusElement.textContent = 'SAFE';
+                statusElement.className = 'safe';
+                resultBox.className = 'result-box';
+            } else if (ratio < 1.0) {
+                statusElement.textContent = 'WARNING';
+                statusElement.className = 'warning';
+                resultBox.className = 'result-box warning';
+            } else {
+                statusElement.textContent = 'UNSAFE';
+                statusElement.className = 'unsafe';
+                resultBox.className = 'result-box danger';
+            }
+        }
+
+        // Add event listeners to all inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateCapacities);
+            });
+            
+            // Initial calculation
+            calculateCapacities();
+        });
+    </script>
+</body>
+</html>
