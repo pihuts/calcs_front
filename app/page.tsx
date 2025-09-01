@@ -11,8 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function StructuralCalculationsPage() {
   const [inputs, setInputs] = useState({
-    // Member properties
+    memberType: "steelpy", // "steelpy" or "plate"
+    // Steelpy member properties
+    sectionClass: "W_shapes",
     sectionName: "W21X83",
+    shapeType: "W",
+    role: "BEAM",
+    loadingCondition: "1",
+    // Plate properties
+    thickness: "0.625",
+    width: "10",
+    clipping: "0",
+    // Common properties
     material: "A992",
     length: "25",
     // Global loads (6-component load vector)
@@ -122,47 +132,198 @@ export default function StructuralCalculationsPage() {
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Member Properties</h3>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="sectionName">Section Name</Label>
+                      <Label htmlFor="memberType">Member Type</Label>
                       <Select
-                        value={inputs.sectionName}
-                        onValueChange={(value) => handleInputChange("sectionName", value)}
+                        value={inputs.memberType}
+                        onValueChange={(value) => handleInputChange("memberType", value)}
                       >
                         <SelectTrigger className="bg-input">
-                          <SelectValue placeholder="Select section" />
+                          <SelectValue placeholder="Select member type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="W21X83">W21X83</SelectItem>
-                          <SelectItem value="W18X76">W18X76</SelectItem>
-                          <SelectItem value="W24X94">W24X94</SelectItem>
-                          <SelectItem value="W16X67">W16X67</SelectItem>
+                          <SelectItem value="steelpy">Steel Section (W, L, C, etc.)</SelectItem>
+                          <SelectItem value="plate">Custom Plate</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="material">Material Grade</Label>
-                      <Select value={inputs.material} onValueChange={(value) => handleInputChange("material", value)}>
-                        <SelectTrigger className="bg-input">
-                          <SelectValue placeholder="Select material" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A992">A992</SelectItem>
-                          <SelectItem value="A572">A572</SelectItem>
-                          <SelectItem value="A36">A36</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="length">Member Length (ft)</Label>
-                      <Input
-                        id="length"
-                        type="number"
-                        placeholder="25"
-                        value={inputs.length}
-                        onChange={(e) => handleInputChange("length", e.target.value)}
-                        className="bg-input"
-                      />
+
+                    {inputs.memberType === "steelpy" ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sectionClass">Section Class</Label>
+                          <Select
+                            value={inputs.sectionClass}
+                            onValueChange={(value) => handleInputChange("sectionClass", value)}
+                          >
+                            <SelectTrigger className="bg-input">
+                              <SelectValue placeholder="Select section class" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="W_shapes">W Shapes (Wide Flange)</SelectItem>
+                              <SelectItem value="L_shapes">L Shapes (Angles)</SelectItem>
+                              <SelectItem value="C_shapes">C Shapes (Channels)</SelectItem>
+                              <SelectItem value="HSS_shapes">HSS Shapes (Hollow)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="sectionName">Section Name</Label>
+                          <Select
+                            value={inputs.sectionName}
+                            onValueChange={(value) => handleInputChange("sectionName", value)}
+                          >
+                            <SelectTrigger className="bg-input">
+                              <SelectValue placeholder="Select section" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inputs.sectionClass === "W_shapes" && (
+                                <>
+                                  <SelectItem value="W21X83">W21X83</SelectItem>
+                                  <SelectItem value="W18X76">W18X76</SelectItem>
+                                  <SelectItem value="W24X94">W24X94</SelectItem>
+                                  <SelectItem value="W16X67">W16X67</SelectItem>
+                                  <SelectItem value="W14X90">W14X90</SelectItem>
+                                </>
+                              )}
+                              {inputs.sectionClass === "L_shapes" && (
+                                <>
+                                  <SelectItem value="L8X6X1">L8X6X1</SelectItem>
+                                  <SelectItem value="L6X4X1/2">L6X4X1/2"</SelectItem>
+                                  <SelectItem value="L4X4X1/2">L4X4X1/2</SelectItem>
+                                  <SelectItem value="L3X3X1/4">L3X3X1/4</SelectItem>
+                                </>
+                              )}
+                              {inputs.sectionClass === "C_shapes" && (
+                                <>
+                                  <SelectItem value="C15X50">C15X50</SelectItem>
+                                  <SelectItem value="C12X30">C12X30</SelectItem>
+                                  <SelectItem value="C10X25">C10X25</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="shapeType">Shape Type</Label>
+                          <Select
+                            value={inputs.shapeType}
+                            onValueChange={(value) => handleInputChange("shapeType", value)}
+                          >
+                            <SelectTrigger className="bg-input">
+                              <SelectValue placeholder="Select shape type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="W">W</SelectItem>
+                              <SelectItem value="L">L</SelectItem>
+                              <SelectItem value="C">C</SelectItem>
+                              <SelectItem value="HSS">HSS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="role">Member Role</Label>
+                          <Select value={inputs.role} onValueChange={(value) => handleInputChange("role", value)}>
+                            <SelectTrigger className="bg-input">
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BEAM">BEAM</SelectItem>
+                              <SelectItem value="COLUMN">COLUMN</SelectItem>
+                              <SelectItem value="BRACE">BRACE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="thickness">Thickness (in)</Label>
+                          <Select
+                            value={inputs.thickness}
+                            onValueChange={(value) => handleInputChange("thickness", value)}
+                          >
+                            <SelectTrigger className="bg-input">
+                              <SelectValue placeholder="Select thickness" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0.25">1/4"</SelectItem>
+                              <SelectItem value="0.375">3/8"</SelectItem>
+                              <SelectItem value="0.5">1/2"</SelectItem>
+                              <SelectItem value="0.625">5/8"</SelectItem>
+                              <SelectItem value="0.75">3/4"</SelectItem>
+                              <SelectItem value="1.0">1"</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="width">Width (in)</Label>
+                          <Input
+                            id="width"
+                            type="number"
+                            placeholder="10"
+                            value={inputs.width}
+                            onChange={(e) => handleInputChange("width", e.target.value)}
+                            className="bg-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="clipping">Clipping (in)</Label>
+                          <Input
+                            id="clipping"
+                            type="number"
+                            placeholder="0"
+                            value={inputs.clipping}
+                            onChange={(e) => handleInputChange("clipping", e.target.value)}
+                            className="bg-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="material">Material Grade</Label>
+                        <Select value={inputs.material} onValueChange={(value) => handleInputChange("material", value)}>
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select material" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A992">A992</SelectItem>
+                            <SelectItem value="A572_GR50">A572 Gr50</SelectItem>
+                            <SelectItem value="A36">A36</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="loadingCondition">Loading Condition</Label>
+                        <Select
+                          value={inputs.loadingCondition}
+                          onValueChange={(value) => handleInputChange("loadingCondition", value)}
+                        >
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 - Normal</SelectItem>
+                            <SelectItem value="2">2 - Bracing</SelectItem>
+                            <SelectItem value="3">3 - Special</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="length">Member Length (ft)</Label>
+                        <Input
+                          id="length"
+                          type="number"
+                          placeholder="25"
+                          value={inputs.length}
+                          onChange={(e) => handleInputChange("length", e.target.value)}
+                          className="bg-input"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -526,12 +687,41 @@ export default function StructuralCalculationsPage() {
                   <h4 className="font-heading font-semibold mb-3">Design Summary</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>Member Section:</span>
-                      <span className="font-medium">{inputs.sectionName}</span>
+                      <span>Member Type:</span>
+                      <span className="font-medium">
+                        {inputs.memberType === "steelpy" ? "Steel Section" : "Custom Plate"}
+                      </span>
                     </div>
+                    {inputs.memberType === "steelpy" ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Section:</span>
+                          <span className="font-medium">{inputs.sectionName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Role:</span>
+                          <span className="font-medium">{inputs.role}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Thickness:</span>
+                          <span className="font-medium">{inputs.thickness}"</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Width:</span>
+                          <span className="font-medium">{inputs.width}"</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span>Material Grade:</span>
                       <span className="font-medium">{inputs.material}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Loading Condition:</span>
+                      <span className="font-medium">{inputs.loadingCondition}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Bolt Pattern:</span>
