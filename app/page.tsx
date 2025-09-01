@@ -5,9 +5,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+interface BoltConfiguration {
+  id: string
+  name: string
+  rowSpacing: string
+  columnSpacing: string
+  nRows: string
+  nColumns: string
+  edgeDistanceVertical: string
+  edgeDistanceHorizontal: string
+  boltDiameter: string
+  boltGrade: string
+  angle: string
+  connectionType: "bolted"
+}
+
+interface GlobalLoads {
+  id: string
+  name: string
+  fx: string
+  fy: string
+  fz: string
+  mx: string
+  my: string
+  mz: string
+  directLoad: string
+}
 
 interface Member {
   id: string
@@ -36,24 +62,8 @@ interface Connection {
   componentA: string
   componentB: string
   connectionType: string
-  // Bolt configuration
-  rowSpacing: string
-  columnSpacing: string
-  nRows: string
-  nColumns: string
-  edgeDistanceVertical: string
-  edgeDistanceHorizontal: string
-  boltDiameter: string
-  boltGrade: string
-  angle: string
-  // Global loads
-  fx: string
-  fy: string
-  fz: string
-  mx: string
-  my: string
-  mz: string
-  directLoad: string
+  boltConfigurationId: string
+  globalLoadsId: string
   overrideAg?: string
 }
 
@@ -63,6 +73,12 @@ export default function StructuralCalculationsPage() {
 
   const [connections, setConnections] = useState<Connection[]>([])
   const [connectionCounter, setConnectionCounter] = useState(1)
+
+  const [boltConfigurations, setBoltConfigurations] = useState<BoltConfiguration[]>([])
+  const [boltConfigCounter, setBoltConfigCounter] = useState(1)
+
+  const [globalLoads, setGlobalLoads] = useState<GlobalLoads[]>([])
+  const [globalLoadsCounter, setGlobalLoadsCounter] = useState(1)
 
   const [inputs, setInputs] = useState({
     memberType: "steelpy", // "steelpy" or "plate"
@@ -86,16 +102,10 @@ export default function StructuralCalculationsPage() {
     componentA: "TOTAL",
     componentB: "TOTAL",
     connectionType: "bolted",
+    boltConfigurationId: "",
+    globalLoadsId: "",
     overrideAg: "",
-    // Global loads (6-component load vector)
-    fx: "0",
-    fy: "0",
-    fz: "0",
-    mx: "0",
-    my: "0",
-    mz: "0",
-    directLoad: "150",
-    // Bolted connection parameters
+    boltConfigName: "",
     rowSpacing: "3.0",
     columnSpacing: "3.0",
     nRows: "2",
@@ -105,6 +115,14 @@ export default function StructuralCalculationsPage() {
     boltDiameter: "0.875",
     boltGrade: "A325-X",
     angle: "47.2",
+    globalLoadsName: "",
+    fx: "0",
+    fy: "0",
+    fz: "0",
+    mx: "0",
+    my: "0",
+    mz: "0",
+    directLoad: "150",
   })
 
   const [results, setResults] = useState({
@@ -161,12 +179,95 @@ export default function StructuralCalculationsPage() {
     setMembers((prev) => prev.filter((member) => member.id !== id))
   }
 
+  const addBoltConfiguration = () => {
+    const newBoltConfig: BoltConfiguration = {
+      id: `bolt-config-${boltConfigCounter}`,
+      name: inputs.boltConfigName || `Bolt Config ${boltConfigCounter}`,
+      rowSpacing: inputs.rowSpacing,
+      columnSpacing: inputs.columnSpacing,
+      nRows: inputs.nRows,
+      nColumns: inputs.nColumns,
+      edgeDistanceVertical: inputs.edgeDistanceVertical,
+      edgeDistanceHorizontal: inputs.edgeDistanceHorizontal,
+      boltDiameter: inputs.boltDiameter,
+      boltGrade: inputs.boltGrade,
+      angle: inputs.angle,
+      connectionType: "bolted",
+    }
+
+    setBoltConfigurations((prev) => [...prev, newBoltConfig])
+    setBoltConfigCounter((prev) => prev + 1)
+
+    // Reset bolt config form
+    setInputs((prev) => ({
+      ...prev,
+      boltConfigName: "",
+      rowSpacing: "3.0",
+      columnSpacing: "3.0",
+      nRows: "2",
+      nColumns: "7",
+      edgeDistanceVertical: "2.0",
+      edgeDistanceHorizontal: "1.5",
+      boltDiameter: "0.875",
+      boltGrade: "A325-X",
+      angle: "47.2",
+    }))
+  }
+
+  const removeBoltConfiguration = (id: string) => {
+    setBoltConfigurations((prev) => prev.filter((config) => config.id !== id))
+  }
+
+  const addGlobalLoads = () => {
+    const newGlobalLoads: GlobalLoads = {
+      id: `global-loads-${globalLoadsCounter}`,
+      name: inputs.globalLoadsName || `Global Loads ${globalLoadsCounter}`,
+      fx: inputs.fx,
+      fy: inputs.fy,
+      fz: inputs.fz,
+      mx: inputs.mx,
+      my: inputs.my,
+      mz: inputs.mz,
+      directLoad: inputs.directLoad,
+    }
+
+    setGlobalLoads((prev) => [...prev, newGlobalLoads])
+    setGlobalLoadsCounter((prev) => prev + 1)
+
+    // Reset global loads form
+    setInputs((prev) => ({
+      ...prev,
+      globalLoadsName: "",
+      fx: "0",
+      fy: "0",
+      fz: "0",
+      mx: "0",
+      my: "0",
+      mz: "0",
+      directLoad: "150",
+    }))
+  }
+
+  const removeGlobalLoads = (id: string) => {
+    setGlobalLoads((prev) => prev.filter((loads) => loads.id !== id))
+  }
+
   const addConnection = () => {
     const memberA = members.find((m) => m.id === inputs.memberA)
     const memberB = members.find((m) => m.id === inputs.memberB)
 
     if (!memberA || !memberB) {
       alert("Please select both Member A and Member B")
+      return
+    }
+
+    if (!inputs.boltConfigurationId) {
+      alert("Please select a bolt configuration")
+      return
+    }
+
+    if (!inputs.globalLoadsId) {
+      alert("Please select global loads")
       return
     }
 
@@ -178,22 +279,8 @@ export default function StructuralCalculationsPage() {
       componentA: inputs.componentA,
       componentB: inputs.componentB,
       connectionType: inputs.connectionType,
-      rowSpacing: inputs.rowSpacing,
-      columnSpacing: inputs.columnSpacing,
-      nRows: inputs.nRows,
-      nColumns: inputs.nColumns,
-      edgeDistanceVertical: inputs.edgeDistanceVertical,
-      edgeDistanceHorizontal: inputs.edgeDistanceHorizontal,
-      boltDiameter: inputs.boltDiameter,
-      boltGrade: inputs.boltGrade,
-      angle: inputs.angle,
-      fx: inputs.fx,
-      fy: inputs.fy,
-      fz: inputs.fz,
-      mx: inputs.mx,
-      my: inputs.my,
-      mz: inputs.mz,
-      directLoad: inputs.directLoad,
+      boltConfigurationId: inputs.boltConfigurationId,
+      globalLoadsId: inputs.globalLoadsId,
       overrideAg: inputs.overrideAg || undefined,
     }
 
@@ -206,6 +293,8 @@ export default function StructuralCalculationsPage() {
       connectionName: "",
       memberA: "",
       memberB: "",
+      boltConfigurationId: "",
+      globalLoadsId: "",
       overrideAg: "",
     }))
   }
@@ -215,9 +304,15 @@ export default function StructuralCalculationsPage() {
   }
 
   const calculateResults = () => {
+    const selectedGlobalLoads = globalLoads.find((loads) => loads.id === inputs.globalLoadsId)
+    const directLoad = selectedGlobalLoads ? Number.parseFloat(selectedGlobalLoads.directLoad) || 0 : 0
+
+    const selectedBoltConfig = boltConfigurations.find((config) => config.id === inputs.boltConfigurationId)
+    const nBolts = selectedBoltConfig
+      ? (Number.parseFloat(selectedBoltConfig.nRows) || 2) * (Number.parseFloat(selectedBoltConfig.nColumns) || 7)
+      : 14
+
     // Sample calculations using user's parameters
-    const directLoad = Number.parseFloat(inputs.directLoad) || 0
-    const nBolts = (Number.parseFloat(inputs.nRows) || 2) * (Number.parseFloat(inputs.nColumns) || 7)
     const d = Number.parseFloat(inputs.boltDiameter) || 0.875
     const Fu = 400 // A325 bolt ultimate strength (MPa)
     const Fy = 360 // Yield strength for A992 material (MPa)
@@ -264,19 +359,110 @@ export default function StructuralCalculationsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-8">
-          <h1 className="text-4xl font-heading font-black text-foreground text-balance">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-heading font-bold mb-4 text-foreground text-balance">
             Structural Connection Design Calculator
           </h1>
-          <p className="text-lg text-muted mt-2 text-pretty">
-            Professional limit states design calculations for structural steel connections
+          <p className="text-xl text-muted max-w-3xl mx-auto text-pretty">
+            Professional engineering calculations for limit states of structural connections with LaTeX-rendered
+            formulas and comprehensive design verification.
           </p>
         </div>
-      </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="font-heading font-bold">Created Bolt Configurations</CardTitle>
+            <CardDescription>Manage reusable bolt configuration templates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {boltConfigurations.length === 0 ? (
+              <div className="text-center py-8 text-muted">
+                <p>No bolt configurations created yet. Add configurations using the form below.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {boltConfigurations.map((config) => (
+                  <div key={config.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        BOLT CONFIG
+                      </Badge>
+                      <div>
+                        <h4 className="font-heading font-semibold">{config.name}</h4>
+                        <div className="text-sm text-muted space-x-4">
+                          <span>
+                            Pattern: {config.nRows}×{config.nColumns}
+                          </span>
+                          <span>
+                            Spacing: {config.rowSpacing}"×{config.columnSpacing}"
+                          </span>
+                          <span>Diameter: {config.boltDiameter}"</span>
+                          <span>Grade: {config.boltGrade}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeBoltConfiguration(config.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="font-heading font-bold">Created Global Loads</CardTitle>
+            <CardDescription>Manage reusable load case templates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {globalLoads.length === 0 ? (
+              <div className="text-center py-8 text-muted">
+                <p>No global loads created yet. Add load cases using the form below.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {globalLoads.map((loads) => (
+                  <div key={loads.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                        LOADS
+                      </Badge>
+                      <div>
+                        <h4 className="font-heading font-semibold">{loads.name}</h4>
+                        <div className="text-sm text-muted space-x-4">
+                          <span>
+                            Forces: Fx={loads.fx}, Fy={loads.fy}, Fz={loads.fz} kip
+                          </span>
+                          <span>
+                            Moments: Mx={loads.mx}, My={loads.my}, Mz={loads.mz} kip-ft
+                          </span>
+                          <span>Direct: {loads.directLoad} kip</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeGlobalLoads(loads.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="font-heading font-bold">Created Connections</CardTitle>
@@ -289,38 +475,44 @@ export default function StructuralCalculationsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {connections.map((connection) => (
-                  <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {connection.connectionType.toUpperCase()}
-                      </Badge>
-                      <div>
-                        <h4 className="font-heading font-semibold">{connection.name}</h4>
-                        <div className="text-sm text-muted space-x-4">
-                          <span>
-                            Member A: {connection.memberA.name} ({connection.componentA})
-                          </span>
-                          <span>
-                            Member B: {connection.memberB.name} ({connection.componentB})
-                          </span>
-                          <span>
-                            Bolts: {connection.nRows}×{connection.nColumns}
-                          </span>
-                          <span>Load: {connection.directLoad} kip</span>
+                {connections.map((connection) => {
+                  const boltConfig = boltConfigurations.find((config) => config.id === connection.boltConfigurationId)
+                  const loads = globalLoads.find((loads) => loads.id === connection.globalLoadsId)
+
+                  return (
+                    <div
+                      key={connection.id}
+                      className="flex items-center justify-between p-4 border rounded-lg bg-card"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {connection.connectionType.toUpperCase()}
+                        </Badge>
+                        <div>
+                          <h4 className="font-heading font-semibold">{connection.name}</h4>
+                          <div className="text-sm text-muted space-x-4">
+                            <span>
+                              Member A: {connection.memberA.name} ({connection.componentA})
+                            </span>
+                            <span>
+                              Member B: {connection.memberB.name} ({connection.componentB})
+                            </span>
+                            <span>Bolts: {boltConfig ? `${boltConfig.nRows}×${boltConfig.nColumns}` : "N/A"}</span>
+                            <span>Load: {loads ? loads.directLoad : "N/A"} kip</span>
+                          </div>
                         </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeConnection(connection.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Remove
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeConnection(connection.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
@@ -383,575 +575,610 @@ export default function StructuralCalculationsPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
+                <CardTitle className="font-heading font-bold">Create New Bolt Configuration</CardTitle>
+                <CardDescription>Define reusable bolt pattern and properties</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="boltConfigName">Configuration Name (optional)</Label>
+                  <Input
+                    id="boltConfigName"
+                    placeholder="e.g., Standard 2x7 Pattern"
+                    value={inputs.boltConfigName}
+                    onChange={(e) => handleInputChange("boltConfigName", e.target.value)}
+                    className="bg-input"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rowSpacing">Row Spacing (in)</Label>
+                    <Input
+                      id="rowSpacing"
+                      type="number"
+                      step="0.1"
+                      placeholder="3.0"
+                      value={inputs.rowSpacing}
+                      onChange={(e) => handleInputChange("rowSpacing", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="columnSpacing">Column Spacing (in)</Label>
+                    <Input
+                      id="columnSpacing"
+                      type="number"
+                      step="0.1"
+                      placeholder="3.0"
+                      value={inputs.columnSpacing}
+                      onChange={(e) => handleInputChange("columnSpacing", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nRows">Number of Rows</Label>
+                    <Input
+                      id="nRows"
+                      type="number"
+                      placeholder="2"
+                      value={inputs.nRows}
+                      onChange={(e) => handleInputChange("nRows", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nColumns">Number of Columns</Label>
+                    <Input
+                      id="nColumns"
+                      type="number"
+                      placeholder="7"
+                      value={inputs.nColumns}
+                      onChange={(e) => handleInputChange("nColumns", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edgeDistanceVertical">Edge Distance Vertical (in)</Label>
+                    <Input
+                      id="edgeDistanceVertical"
+                      type="number"
+                      step="0.1"
+                      placeholder="2.0"
+                      value={inputs.edgeDistanceVertical}
+                      onChange={(e) => handleInputChange("edgeDistanceVertical", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edgeDistanceHorizontal">Edge Distance Horizontal (in)</Label>
+                    <Input
+                      id="edgeDistanceHorizontal"
+                      type="number"
+                      step="0.1"
+                      placeholder="1.5"
+                      value={inputs.edgeDistanceHorizontal}
+                      onChange={(e) => handleInputChange("edgeDistanceHorizontal", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="boltDiameter">Bolt Diameter (in)</Label>
+                    <Select
+                      value={inputs.boltDiameter}
+                      onValueChange={(value) => handleInputChange("boltDiameter", value)}
+                    >
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select diameter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0.5">1/2"</SelectItem>
+                        <SelectItem value="0.625">5/8"</SelectItem>
+                        <SelectItem value="0.75">3/4"</SelectItem>
+                        <SelectItem value="0.875">7/8"</SelectItem>
+                        <SelectItem value="1.0">1"</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="boltGrade">Bolt Grade</Label>
+                    <Select value={inputs.boltGrade} onValueChange={(value) => handleInputChange("boltGrade", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A325-X">A325-X</SelectItem>
+                        <SelectItem value="A325-N">A325-N</SelectItem>
+                        <SelectItem value="A490-X">A490-X</SelectItem>
+                        <SelectItem value="A490-N">A490-N</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="angle">Connection Angle (degrees)</Label>
+                    <Input
+                      id="angle"
+                      type="number"
+                      step="0.1"
+                      placeholder="47.2"
+                      value={inputs.angle}
+                      onChange={(e) => handleInputChange("angle", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={addBoltConfiguration}
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Add Bolt Configuration to List
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-heading font-bold">Create New Global Loads</CardTitle>
+                <CardDescription>Define reusable load case with 6-component load vector</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="globalLoadsName">Load Case Name (optional)</Label>
+                  <Input
+                    id="globalLoadsName"
+                    placeholder="e.g., Wind Load Case 1"
+                    value={inputs.globalLoadsName}
+                    onChange={(e) => handleInputChange("globalLoadsName", e.target.value)}
+                    className="bg-input"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fx">Fx (kip)</Label>
+                    <Input
+                      id="fx"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.fx}
+                      onChange={(e) => handleInputChange("fx", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fy">Fy (kip)</Label>
+                    <Input
+                      id="fy"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.fy}
+                      onChange={(e) => handleInputChange("fy", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fz">Fz (kip)</Label>
+                    <Input
+                      id="fz"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.fz}
+                      onChange={(e) => handleInputChange("fz", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mx">Mx (kip-ft)</Label>
+                    <Input
+                      id="mx"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.mx}
+                      onChange={(e) => handleInputChange("mx", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="my">My (kip-ft)</Label>
+                    <Input
+                      id="my"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.my}
+                      onChange={(e) => handleInputChange("my", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mz">Mz (kip-ft)</Label>
+                    <Input
+                      id="mz"
+                      type="number"
+                      placeholder="0"
+                      value={inputs.mz}
+                      onChange={(e) => handleInputChange("mz", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-3">
+                    <Label htmlFor="directLoad">Direct Load (kip)</Label>
+                    <Input
+                      id="directLoad"
+                      type="number"
+                      placeholder="150"
+                      value={inputs.directLoad}
+                      onChange={(e) => handleInputChange("directLoad", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={addGlobalLoads}
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Add Global Loads to List
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="font-heading font-bold">Create New Connection</CardTitle>
                 <CardDescription>Define a connection between two structural members</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Connection Properties</h3>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="connectionName">Connection Name (Optional)</Label>
-                      <Input
-                        id="connectionName"
-                        type="text"
-                        placeholder="e.g., Beam-Column Connection, Brace Connection"
-                        value={inputs.connectionName}
-                        onChange={(e) => handleInputChange("connectionName", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="memberA">Member A</Label>
-                        <Select value={inputs.memberA} onValueChange={(value) => handleInputChange("memberA", value)}>
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select Member A" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {members.map((member) => (
-                              <SelectItem key={member.id} value={member.id}>
-                                {member.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="memberB">Member B</Label>
-                        <Select value={inputs.memberB} onValueChange={(value) => handleInputChange("memberB", value)}>
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select Member B" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {members.map((member) => (
-                              <SelectItem key={member.id} value={member.id}>
-                                {member.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="componentA">Component A</Label>
-                        <Select
-                          value={inputs.componentA}
-                          onValueChange={(value) => handleInputChange("componentA", value)}
-                        >
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select component" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="TOTAL">TOTAL</SelectItem>
-                            <SelectItem value="WEB">WEB</SelectItem>
-                            <SelectItem value="FLANGE">FLANGE</SelectItem>
-                            <SelectItem value="TOP_FLANGE">TOP_FLANGE</SelectItem>
-                            <SelectItem value="BOTTOM_FLANGE">BOTTOM_FLANGE</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="componentB">Component B</Label>
-                        <Select
-                          value={inputs.componentB}
-                          onValueChange={(value) => handleInputChange("componentB", value)}
-                        >
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select component" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="TOTAL">TOTAL</SelectItem>
-                            <SelectItem value="WEB">WEB</SelectItem>
-                            <SelectItem value="FLANGE">FLANGE</SelectItem>
-                            <SelectItem value="TOP_FLANGE">TOP_FLANGE</SelectItem>
-                            <SelectItem value="BOTTOM_FLANGE">BOTTOM_FLANGE</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="connectionType">Connection Type</Label>
-                        <Select
-                          value={inputs.connectionType}
-                          onValueChange={(value) => handleInputChange("connectionType", value)}
-                        >
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="bolted">Bolted Connection</SelectItem>
-                            <SelectItem value="welded">Welded Connection</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="overrideAg">Override Ag (Optional)</Label>
-                        <Input
-                          id="overrideAg"
-                          type="number"
-                          step="0.01"
-                          placeholder="Auto-calculated"
-                          value={inputs.overrideAg}
-                          onChange={(e) => handleInputChange("overrideAg", e.target.value)}
-                          className="bg-input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={addConnection}
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                    disabled={members.length < 2}
-                  >
-                    {members.length < 2 ? "Need at least 2 members" : "Add Connection to List"}
-                  </Button>
+                  <Label htmlFor="connectionName">Connection Name (optional)</Label>
+                  <Input
+                    id="connectionName"
+                    placeholder="e.g., Beam-Column Connection"
+                    value={inputs.connectionName}
+                    onChange={(e) => handleInputChange("connectionName", e.target.value)}
+                    className="bg-input"
+                  />
                 </div>
 
-                <Separator />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="memberA">Member A</Label>
+                    <Select value={inputs.memberA} onValueChange={(value) => handleInputChange("memberA", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select Member A" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="memberB">Member B</Label>
+                    <Select value={inputs.memberB} onValueChange={(value) => handleInputChange("memberB", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select Member B" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="componentA">Component A</Label>
+                    <Select value={inputs.componentA} onValueChange={(value) => handleInputChange("componentA", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select component" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TOTAL">TOTAL</SelectItem>
+                        <SelectItem value="WEB">WEB</SelectItem>
+                        <SelectItem value="FLANGE">FLANGE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="componentB">Component B</Label>
+                    <Select value={inputs.componentB} onValueChange={(value) => handleInputChange("componentB", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select component" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TOTAL">TOTAL</SelectItem>
+                        <SelectItem value="WEB">WEB</SelectItem>
+                        <SelectItem value="FLANGE">FLANGE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="boltConfigurationId">Bolt Configuration</Label>
+                    <Select
+                      value={inputs.boltConfigurationId}
+                      onValueChange={(value) => handleInputChange("boltConfigurationId", value)}
+                    >
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select bolt configuration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {boltConfigurations.map((config) => (
+                          <SelectItem key={config.id} value={config.id}>
+                            {config.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="globalLoadsId">Global Loads</Label>
+                    <Select
+                      value={inputs.globalLoadsId}
+                      onValueChange={(value) => handleInputChange("globalLoadsId", value)}
+                    >
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select global loads" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {globalLoads.map((loads) => (
+                          <SelectItem key={loads.id} value={loads.id}>
+                            {loads.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="overrideAg">Override Gross Area (optional)</Label>
+                  <Input
+                    id="overrideAg"
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave blank to use calculated value"
+                    value={inputs.overrideAg}
+                    onChange={(e) => handleInputChange("overrideAg", e.target.value)}
+                    className="bg-input"
+                  />
+                </div>
+
+                <Button
+                  onClick={addConnection}
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Add Connection to List
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* ... existing member creation section ... */}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-heading font-bold">Add New Member</CardTitle>
+                <CardDescription>Define structural members for connection design</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Add New Member</h3>
+                  <Label htmlFor="memberName">Member Name (optional)</Label>
+                  <Input
+                    id="memberName"
+                    placeholder="e.g., Main Beam, Column A1"
+                    value={inputs.memberName}
+                    onChange={(e) => handleInputChange("memberName", e.target.value)}
+                    className="bg-input"
+                  />
+                </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="memberName">Member Name (Optional)</Label>
-                      <Input
-                        id="memberName"
-                        type="text"
-                        placeholder="e.g., Main Beam, Column A1, Brace 1"
-                        value={inputs.memberName}
-                        onChange={(e) => handleInputChange("memberName", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="memberType">Member Type</Label>
+                  <Select value={inputs.memberType} onValueChange={(value) => handleInputChange("memberType", value)}>
+                    <SelectTrigger className="bg-input">
+                      <SelectValue placeholder="Select member type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="steelpy">Steel Section (W, L, C, etc.)</SelectItem>
+                      <SelectItem value="plate">Custom Plate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
+                {inputs.memberType === "steelpy" ? (
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="memberType">Member Type</Label>
+                      <Label htmlFor="sectionClass">Section Class</Label>
                       <Select
-                        value={inputs.memberType}
-                        onValueChange={(value) => handleInputChange("memberType", value)}
+                        value={inputs.sectionClass}
+                        onValueChange={(value) => handleInputChange("sectionClass", value)}
                       >
                         <SelectTrigger className="bg-input">
-                          <SelectValue placeholder="Select member type" />
+                          <SelectValue placeholder="Select section class" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="steelpy">Steel Section (W, L, C, etc.)</SelectItem>
-                          <SelectItem value="plate">Custom Plate</SelectItem>
+                          <SelectItem value="W_shapes">W Shapes (Wide Flange)</SelectItem>
+                          <SelectItem value="L_shapes">L Shapes (Angles)</SelectItem>
+                          <SelectItem value="C_shapes">C Shapes (Channels)</SelectItem>
+                          <SelectItem value="HSS_shapes">HSS Shapes (Hollow)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {inputs.memberType === "steelpy" ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="sectionClass">Section Class</Label>
-                          <Select
-                            value={inputs.sectionClass}
-                            onValueChange={(value) => handleInputChange("sectionClass", value)}
-                          >
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select section class" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="W_shapes">W Shapes (Wide Flange)</SelectItem>
-                              <SelectItem value="L_shapes">L Shapes (Angles)</SelectItem>
-                              <SelectItem value="C_shapes">C Shapes (Channels)</SelectItem>
-                              <SelectItem value="HSS_shapes">HSS Shapes (Hollow)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="sectionName">Section Name</Label>
-                          <Select
-                            value={inputs.sectionName}
-                            onValueChange={(value) => handleInputChange("sectionName", value)}
-                          >
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select section" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {inputs.sectionClass === "W_shapes" && (
-                                <>
-                                  <SelectItem value="W21X83">W21X83</SelectItem>
-                                  <SelectItem value="W18X76">W18X76</SelectItem>
-                                  <SelectItem value="W24X94">W24X94</SelectItem>
-                                  <SelectItem value="W16X67">W16X67</SelectItem>
-                                  <SelectItem value="W14X90">W14X90</SelectItem>
-                                </>
-                              )}
-                              {inputs.sectionClass === "L_shapes" && (
-                                <>
-                                  <SelectItem value="L8X6X1">L8X6X1</SelectItem>
-                                  <SelectItem value="L6X4X1/2">L6X4X1/2"</SelectItem>
-                                  <SelectItem value="L4X4X1/2">L4X4X1/2</SelectItem>
-                                  <SelectItem value="L3X3X1/4">L3X3X1/4</SelectItem>
-                                </>
-                              )}
-                              {inputs.sectionClass === "C_shapes" && (
-                                <>
-                                  <SelectItem value="C15X50">C15X50</SelectItem>
-                                  <SelectItem value="C12X30">C12X30</SelectItem>
-                                  <SelectItem value="C10X25">C10X25</SelectItem>
-                                </>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="shapeType">Shape Type</Label>
-                          <Select
-                            value={inputs.shapeType}
-                            onValueChange={(value) => handleInputChange("shapeType", value)}
-                          >
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select shape type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="W">W</SelectItem>
-                              <SelectItem value="L">L</SelectItem>
-                              <SelectItem value="C">C</SelectItem>
-                              <SelectItem value="HSS">HSS</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="role">Member Role</Label>
-                          <Select value={inputs.role} onValueChange={(value) => handleInputChange("role", value)}>
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BEAM">BEAM</SelectItem>
-                              <SelectItem value="COLUMN">COLUMN</SelectItem>
-                              <SelectItem value="BRACE">BRACE</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="thickness">Thickness (in)</Label>
-                          <Select
-                            value={inputs.thickness}
-                            onValueChange={(value) => handleInputChange("thickness", value)}
-                          >
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select thickness" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0.25">1/4"</SelectItem>
-                              <SelectItem value="0.375">3/8"</SelectItem>
-                              <SelectItem value="0.5">1/2"</SelectItem>
-                              <SelectItem value="0.625">5/8"</SelectItem>
-                              <SelectItem value="0.75">3/4"</SelectItem>
-                              <SelectItem value="1.0">1"</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="width">Width (in)</Label>
-                          <Input
-                            id="width"
-                            type="number"
-                            placeholder="10"
-                            value={inputs.width}
-                            onChange={(e) => handleInputChange("width", e.target.value)}
-                            className="bg-input"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="clipping">Clipping (in)</Label>
-                          <Input
-                            id="clipping"
-                            type="number"
-                            placeholder="0"
-                            value={inputs.clipping}
-                            onChange={(e) => handleInputChange("clipping", e.target.value)}
-                            className="bg-input"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="material">Material Grade</Label>
-                        <Select value={inputs.material} onValueChange={(value) => handleInputChange("material", value)}>
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A992">A992</SelectItem>
-                            <SelectItem value="A572_GR50">A572 Gr50</SelectItem>
-                            <SelectItem value="A36">A36</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="loadingCondition">Loading Condition</Label>
-                        <Select
-                          value={inputs.loadingCondition}
-                          onValueChange={(value) => handleInputChange("loadingCondition", value)}
-                        >
-                          <SelectTrigger className="bg-input">
-                            <SelectValue placeholder="Select condition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 - Normal</SelectItem>
-                            <SelectItem value="2">2 - Bracing</SelectItem>
-                            <SelectItem value="3">3 - Special</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2 col-span-2">
-                        <Label htmlFor="length">Member Length (ft)</Label>
-                        <Input
-                          id="length"
-                          type="number"
-                          placeholder="25"
-                          value={inputs.length}
-                          onChange={(e) => handleInputChange("length", e.target.value)}
-                          className="bg-input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={addMember}
-                    className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                  >
-                    Add Member to List
-                  </Button>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Global Loads (kip)</h3>
-
-                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fx">Fx (kip)</Label>
-                      <Input
-                        id="fx"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.fx}
-                        onChange={(e) => handleInputChange("fx", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fy">Fy (kip)</Label>
-                      <Input
-                        id="fy"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.fy}
-                        onChange={(e) => handleInputChange("fy", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fz">Fz (kip)</Label>
-                      <Input
-                        id="fz"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.fz}
-                        onChange={(e) => handleInputChange("fz", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="mx">Mx (kip-ft)</Label>
-                      <Input
-                        id="mx"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.mx}
-                        onChange={(e) => handleInputChange("mx", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="my">My (kip-ft)</Label>
-                      <Input
-                        id="my"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.my}
-                        onChange={(e) => handleInputChange("my", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="mz">Mz (kip-ft)</Label>
-                      <Input
-                        id="mz"
-                        type="number"
-                        placeholder="0"
-                        value={inputs.mz}
-                        onChange={(e) => handleInputChange("mz", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-3">
-                      <Label htmlFor="directLoad">Direct Load (kip)</Label>
-                      <Input
-                        id="directLoad"
-                        type="number"
-                        placeholder="150"
-                        value={inputs.directLoad}
-                        onChange={(e) => handleInputChange("directLoad", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Bolted Connection</h3>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="rowSpacing">Row Spacing (in)</Label>
-                      <Input
-                        id="rowSpacing"
-                        type="number"
-                        step="0.1"
-                        placeholder="3.0"
-                        value={inputs.rowSpacing}
-                        onChange={(e) => handleInputChange("rowSpacing", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="columnSpacing">Column Spacing (in)</Label>
-                      <Input
-                        id="columnSpacing"
-                        type="number"
-                        step="0.1"
-                        placeholder="3.0"
-                        value={inputs.columnSpacing}
-                        onChange={(e) => handleInputChange("columnSpacing", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nRows">Number of Rows</Label>
-                      <Input
-                        id="nRows"
-                        type="number"
-                        placeholder="2"
-                        value={inputs.nRows}
-                        onChange={(e) => handleInputChange("nRows", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nColumns">Number of Columns</Label>
-                      <Input
-                        id="nColumns"
-                        type="number"
-                        placeholder="7"
-                        value={inputs.nColumns}
-                        onChange={(e) => handleInputChange("nColumns", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edgeDistanceVertical">Edge Distance Vertical (in)</Label>
-                      <Input
-                        id="edgeDistanceVertical"
-                        type="number"
-                        step="0.1"
-                        placeholder="2.0"
-                        value={inputs.edgeDistanceVertical}
-                        onChange={(e) => handleInputChange("edgeDistanceVertical", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edgeDistanceHorizontal">Edge Distance Horizontal (in)</Label>
-                      <Input
-                        id="edgeDistanceHorizontal"
-                        type="number"
-                        step="0.1"
-                        placeholder="1.5"
-                        value={inputs.edgeDistanceHorizontal}
-                        onChange={(e) => handleInputChange("edgeDistanceHorizontal", e.target.value)}
-                        className="bg-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="boltDiameter">Bolt Diameter (in)</Label>
+                      <Label htmlFor="sectionName">Section Name</Label>
                       <Select
-                        value={inputs.boltDiameter}
-                        onValueChange={(value) => handleInputChange("boltDiameter", value)}
+                        value={inputs.sectionName}
+                        onValueChange={(value) => handleInputChange("sectionName", value)}
                       >
                         <SelectTrigger className="bg-input">
-                          <SelectValue placeholder="Select diameter" />
+                          <SelectValue placeholder="Select section" />
                         </SelectTrigger>
                         <SelectContent>
+                          {inputs.sectionClass === "W_shapes" && (
+                            <>
+                              <SelectItem value="W21X83">W21X83</SelectItem>
+                              <SelectItem value="W18X76">W18X76</SelectItem>
+                              <SelectItem value="W24X94">W24X94</SelectItem>
+                              <SelectItem value="W16X67">W16X67</SelectItem>
+                              <SelectItem value="W14X90">W14X90</SelectItem>
+                            </>
+                          )}
+                          {inputs.sectionClass === "L_shapes" && (
+                            <>
+                              <SelectItem value="L8X6X1">L8X6X1</SelectItem>
+                              <SelectItem value="L6X4X1/2">L6X4X1/2"</SelectItem>
+                              <SelectItem value="L4X4X1/2">L4X4X1/2</SelectItem>
+                              <SelectItem value="L3X3X1/4">L3X3X1/4</SelectItem>
+                            </>
+                          )}
+                          {inputs.sectionClass === "C_shapes" && (
+                            <>
+                              <SelectItem value="C15X50">C15X50</SelectItem>
+                              <SelectItem value="C12X30">C12X30</SelectItem>
+                              <SelectItem value="C10X25">C10X25</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shapeType">Shape Type</Label>
+                      <Select value={inputs.shapeType} onValueChange={(value) => handleInputChange("shapeType", value)}>
+                        <SelectTrigger className="bg-input">
+                          <SelectValue placeholder="Select shape type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="W">W</SelectItem>
+                          <SelectItem value="L">L</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                          <SelectItem value="HSS">HSS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Member Role</Label>
+                      <Select value={inputs.role} onValueChange={(value) => handleInputChange("role", value)}>
+                        <SelectTrigger className="bg-input">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BEAM">BEAM</SelectItem>
+                          <SelectItem value="COLUMN">COLUMN</SelectItem>
+                          <SelectItem value="BRACE">BRACE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="thickness">Thickness (in)</Label>
+                      <Select value={inputs.thickness} onValueChange={(value) => handleInputChange("thickness", value)}>
+                        <SelectTrigger className="bg-input">
+                          <SelectValue placeholder="Select thickness" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.25">1/4"</SelectItem>
+                          <SelectItem value="0.375">3/8"</SelectItem>
                           <SelectItem value="0.5">1/2"</SelectItem>
                           <SelectItem value="0.625">5/8"</SelectItem>
                           <SelectItem value="0.75">3/4"</SelectItem>
-                          <SelectItem value="0.875">7/8"</SelectItem>
                           <SelectItem value="1.0">1"</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="boltGrade">Bolt Grade</Label>
-                      <Select value={inputs.boltGrade} onValueChange={(value) => handleInputChange("boltGrade", value)}>
-                        <SelectTrigger className="bg-input">
-                          <SelectValue placeholder="Select grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A325-X">A325-X</SelectItem>
-                          <SelectItem value="A325-N">A325-N</SelectItem>
-                          <SelectItem value="A490-X">A490-X</SelectItem>
-                          <SelectItem value="A490-N">A490-N</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="angle">Connection Angle (degrees)</Label>
+                      <Label htmlFor="width">Width (in)</Label>
                       <Input
-                        id="angle"
+                        id="width"
                         type="number"
-                        step="0.1"
-                        placeholder="47.2"
-                        value={inputs.angle}
-                        onChange={(e) => handleInputChange("angle", e.target.value)}
+                        placeholder="10"
+                        value={inputs.width}
+                        onChange={(e) => handleInputChange("width", e.target.value)}
+                        className="bg-input"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="clipping">Clipping (in)</Label>
+                      <Input
+                        id="clipping"
+                        type="number"
+                        placeholder="0"
+                        value={inputs.clipping}
+                        onChange={(e) => handleInputChange("clipping", e.target.value)}
                         className="bg-input"
                       />
                     </div>
                   </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="material">Material Grade</Label>
+                    <Select value={inputs.material} onValueChange={(value) => handleInputChange("material", value)}>
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select material" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A992">A992</SelectItem>
+                        <SelectItem value="A572_GR50">A572 Gr50</SelectItem>
+                        <SelectItem value="A36">A36</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="loadingCondition">Loading Condition</Label>
+                    <Select
+                      value={inputs.loadingCondition}
+                      onValueChange={(value) => handleInputChange("loadingCondition", value)}
+                    >
+                      <SelectTrigger className="bg-input">
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 - Normal</SelectItem>
+                        <SelectItem value="2">2 - Bracing</SelectItem>
+                        <SelectItem value="3">3 - Special</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="length">Member Length (ft)</Label>
+                    <Input
+                      id="length"
+                      type="number"
+                      placeholder="25"
+                      value={inputs.length}
+                      onChange={(e) => handleInputChange("length", e.target.value)}
+                      className="bg-input"
+                    />
+                  </div>
                 </div>
 
                 <Button
-                  onClick={calculateResults}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={addMember}
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
                 >
-                  Calculate Connection Capacity
+                  Add Member to List
                 </Button>
               </CardContent>
             </Card>
+
+            <Button
+              onClick={calculateResults}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Calculate Connection Capacity
+            </Button>
           </div>
+
+          {/* ... existing results section ... */}
 
           {/* Results and Formulas */}
           <div className="space-y-6">
