@@ -28,9 +28,41 @@ interface Member {
   length: string
 }
 
+interface Connection {
+  id: string
+  name: string
+  memberA: Member
+  memberB: Member
+  componentA: string
+  componentB: string
+  connectionType: string
+  // Bolt configuration
+  rowSpacing: string
+  columnSpacing: string
+  nRows: string
+  nColumns: string
+  edgeDistanceVertical: string
+  edgeDistanceHorizontal: string
+  boltDiameter: string
+  boltGrade: string
+  angle: string
+  // Global loads
+  fx: string
+  fy: string
+  fz: string
+  mx: string
+  my: string
+  mz: string
+  directLoad: string
+  overrideAg?: string
+}
+
 export default function StructuralCalculationsPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [memberCounter, setMemberCounter] = useState(1)
+
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [connectionCounter, setConnectionCounter] = useState(1)
 
   const [inputs, setInputs] = useState({
     memberType: "steelpy", // "steelpy" or "plate"
@@ -48,6 +80,13 @@ export default function StructuralCalculationsPage() {
     // Common properties
     material: "A992",
     length: "25",
+    connectionName: "",
+    memberA: "",
+    memberB: "",
+    componentA: "TOTAL",
+    componentB: "TOTAL",
+    connectionType: "bolted",
+    overrideAg: "",
     // Global loads (6-component load vector)
     fx: "0",
     fy: "0",
@@ -122,6 +161,59 @@ export default function StructuralCalculationsPage() {
     setMembers((prev) => prev.filter((member) => member.id !== id))
   }
 
+  const addConnection = () => {
+    const memberA = members.find((m) => m.id === inputs.memberA)
+    const memberB = members.find((m) => m.id === inputs.memberB)
+
+    if (!memberA || !memberB) {
+      alert("Please select both Member A and Member B")
+      return
+    }
+
+    const newConnection: Connection = {
+      id: `connection-${connectionCounter}`,
+      name: inputs.connectionName || `Connection ${connectionCounter}`,
+      memberA,
+      memberB,
+      componentA: inputs.componentA,
+      componentB: inputs.componentB,
+      connectionType: inputs.connectionType,
+      rowSpacing: inputs.rowSpacing,
+      columnSpacing: inputs.columnSpacing,
+      nRows: inputs.nRows,
+      nColumns: inputs.nColumns,
+      edgeDistanceVertical: inputs.edgeDistanceVertical,
+      edgeDistanceHorizontal: inputs.edgeDistanceHorizontal,
+      boltDiameter: inputs.boltDiameter,
+      boltGrade: inputs.boltGrade,
+      angle: inputs.angle,
+      fx: inputs.fx,
+      fy: inputs.fy,
+      fz: inputs.fz,
+      mx: inputs.mx,
+      my: inputs.my,
+      mz: inputs.mz,
+      directLoad: inputs.directLoad,
+      overrideAg: inputs.overrideAg || undefined,
+    }
+
+    setConnections((prev) => [...prev, newConnection])
+    setConnectionCounter((prev) => prev + 1)
+
+    // Reset connection form
+    setInputs((prev) => ({
+      ...prev,
+      connectionName: "",
+      memberA: "",
+      memberB: "",
+      overrideAg: "",
+    }))
+  }
+
+  const removeConnection = (id: string) => {
+    setConnections((prev) => prev.filter((connection) => connection.id !== id))
+  }
+
   const calculateResults = () => {
     // Sample calculations using user's parameters
     const directLoad = Number.parseFloat(inputs.directLoad) || 0
@@ -187,6 +279,55 @@ export default function StructuralCalculationsPage() {
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         <Card className="mb-8">
           <CardHeader>
+            <CardTitle className="font-heading font-bold">Created Connections</CardTitle>
+            <CardDescription>Manage your structural connections for design calculations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {connections.length === 0 ? (
+              <div className="text-center py-8 text-muted">
+                <p>No connections created yet. Add connections using the form below.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {connections.map((connection) => (
+                  <div key={connection.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {connection.connectionType.toUpperCase()}
+                      </Badge>
+                      <div>
+                        <h4 className="font-heading font-semibold">{connection.name}</h4>
+                        <div className="text-sm text-muted space-x-4">
+                          <span>
+                            Member A: {connection.memberA.name} ({connection.componentA})
+                          </span>
+                          <span>
+                            Member B: {connection.memberB.name} ({connection.componentB})
+                          </span>
+                          <span>
+                            Bolts: {connection.nRows}×{connection.nColumns}
+                          </span>
+                          <span>Load: {connection.directLoad} kip</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeConnection(connection.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader>
             <CardTitle className="font-heading font-bold">Created Members</CardTitle>
             <CardDescription>Manage your structural members for connection design</CardDescription>
           </CardHeader>
@@ -242,12 +383,142 @@ export default function StructuralCalculationsPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="font-heading font-bold">Add New Member</CardTitle>
-                <CardDescription>Create a new structural member for your connection design</CardDescription>
+                <CardTitle className="font-heading font-bold">Create New Connection</CardTitle>
+                <CardDescription>Define a connection between two structural members</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Member Properties</h3>
+                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Connection Properties</h3>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="connectionName">Connection Name (Optional)</Label>
+                      <Input
+                        id="connectionName"
+                        type="text"
+                        placeholder="e.g., Beam-Column Connection, Brace Connection"
+                        value={inputs.connectionName}
+                        onChange={(e) => handleInputChange("connectionName", e.target.value)}
+                        className="bg-input"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="memberA">Member A</Label>
+                        <Select value={inputs.memberA} onValueChange={(value) => handleInputChange("memberA", value)}>
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select Member A" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {members.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="memberB">Member B</Label>
+                        <Select value={inputs.memberB} onValueChange={(value) => handleInputChange("memberB", value)}>
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select Member B" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {members.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="componentA">Component A</Label>
+                        <Select
+                          value={inputs.componentA}
+                          onValueChange={(value) => handleInputChange("componentA", value)}
+                        >
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select component" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TOTAL">TOTAL</SelectItem>
+                            <SelectItem value="WEB">WEB</SelectItem>
+                            <SelectItem value="FLANGE">FLANGE</SelectItem>
+                            <SelectItem value="TOP_FLANGE">TOP_FLANGE</SelectItem>
+                            <SelectItem value="BOTTOM_FLANGE">BOTTOM_FLANGE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="componentB">Component B</Label>
+                        <Select
+                          value={inputs.componentB}
+                          onValueChange={(value) => handleInputChange("componentB", value)}
+                        >
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select component" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TOTAL">TOTAL</SelectItem>
+                            <SelectItem value="WEB">WEB</SelectItem>
+                            <SelectItem value="FLANGE">FLANGE</SelectItem>
+                            <SelectItem value="TOP_FLANGE">TOP_FLANGE</SelectItem>
+                            <SelectItem value="BOTTOM_FLANGE">BOTTOM_FLANGE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="connectionType">Connection Type</Label>
+                        <Select
+                          value={inputs.connectionType}
+                          onValueChange={(value) => handleInputChange("connectionType", value)}
+                        >
+                          <SelectTrigger className="bg-input">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bolted">Bolted Connection</SelectItem>
+                            <SelectItem value="welded">Welded Connection</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="overrideAg">Override Ag (Optional)</Label>
+                        <Input
+                          id="overrideAg"
+                          type="number"
+                          step="0.01"
+                          placeholder="Auto-calculated"
+                          value={inputs.overrideAg}
+                          onChange={(e) => handleInputChange("overrideAg", e.target.value)}
+                          className="bg-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={addConnection}
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                    disabled={members.length < 2}
+                  >
+                    {members.length < 2 ? "Need at least 2 members" : "Add Connection to List"}
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Add New Member</h3>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -467,6 +738,7 @@ export default function StructuralCalculationsPage() {
 
                 <div>
                   <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Global Loads (kip)</h3>
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="fx">Fx (kip)</Label>
@@ -552,6 +824,7 @@ export default function StructuralCalculationsPage() {
 
                 <div>
                   <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Bolted Connection</h3>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="rowSpacing">Row Spacing (in)</Label>
