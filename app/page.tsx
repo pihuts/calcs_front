@@ -9,9 +9,32 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
+interface Member {
+  id: string
+  type: "steelpy" | "plate"
+  name: string
+  // Steelpy properties
+  sectionClass?: string
+  sectionName?: string
+  shapeType?: string
+  role?: string
+  // Plate properties
+  thickness?: string
+  width?: string
+  clipping?: string
+  // Common properties
+  material: string
+  loadingCondition: string
+  length: string
+}
+
 export default function StructuralCalculationsPage() {
+  const [members, setMembers] = useState<Member[]>([])
+  const [memberCounter, setMemberCounter] = useState(1)
+
   const [inputs, setInputs] = useState({
     memberType: "steelpy", // "steelpy" or "plate"
+    memberName: "",
     // Steelpy member properties
     sectionClass: "W_shapes",
     sectionName: "W21X83",
@@ -56,6 +79,47 @@ export default function StructuralCalculationsPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setInputs((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const addMember = () => {
+    const newMember: Member = {
+      id: `member-${memberCounter}`,
+      type: inputs.memberType as "steelpy" | "plate",
+      name: inputs.memberName || `${inputs.memberType === "steelpy" ? inputs.sectionName : "Plate"} ${memberCounter}`,
+      material: inputs.material,
+      loadingCondition: inputs.loadingCondition,
+      length: inputs.length,
+    }
+
+    if (inputs.memberType === "steelpy") {
+      newMember.sectionClass = inputs.sectionClass
+      newMember.sectionName = inputs.sectionName
+      newMember.shapeType = inputs.shapeType
+      newMember.role = inputs.role
+    } else {
+      newMember.thickness = inputs.thickness
+      newMember.width = inputs.width
+      newMember.clipping = inputs.clipping
+    }
+
+    setMembers((prev) => [...prev, newMember])
+    setMemberCounter((prev) => prev + 1)
+
+    // Reset member form
+    setInputs((prev) => ({
+      ...prev,
+      memberName: "",
+      memberType: "steelpy",
+      sectionName: "W21X83",
+      role: "BEAM",
+      thickness: "0.625",
+      width: "10",
+      clipping: "0",
+    }))
+  }
+
+  const removeMember = (id: string) => {
+    setMembers((prev) => prev.filter((member) => member.id !== id))
   }
 
   const calculateResults = () => {
@@ -121,19 +185,83 @@ export default function StructuralCalculationsPage() {
       </header>
 
       <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="font-heading font-bold">Created Members</CardTitle>
+            <CardDescription>Manage your structural members for connection design</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {members.length === 0 ? (
+              <div className="text-center py-8 text-muted">
+                <p>No members created yet. Add members using the form below.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {members.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-4">
+                      <Badge variant={member.type === "steelpy" ? "default" : "secondary"}>
+                        {member.type === "steelpy" ? "Steel Section" : "Plate"}
+                      </Badge>
+                      <div>
+                        <h4 className="font-heading font-semibold">{member.name}</h4>
+                        <div className="text-sm text-muted space-x-4">
+                          {member.type === "steelpy" ? (
+                            <>
+                              <span>Section: {member.sectionName}</span>
+                              <span>Role: {member.role}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Thickness: {member.thickness}"</span>
+                              <span>Width: {member.width}"</span>
+                            </>
+                          )}
+                          <span>Material: {member.material}</span>
+                          <span>Length: {member.length} ft</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeMember(member.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Input Parameters */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="font-heading font-bold">Input Parameters</CardTitle>
-                <CardDescription>Enter the design parameters for your structural connection</CardDescription>
+                <CardTitle className="font-heading font-bold">Add New Member</CardTitle>
+                <CardDescription>Create a new structural member for your connection design</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Member Properties</h3>
 
                   <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="memberName">Member Name (Optional)</Label>
+                      <Input
+                        id="memberName"
+                        type="text"
+                        placeholder="e.g., Main Beam, Column A1, Brace 1"
+                        value={inputs.memberName}
+                        onChange={(e) => handleInputChange("memberName", e.target.value)}
+                        className="bg-input"
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="memberType">Member Type</Label>
                       <Select
@@ -326,6 +454,13 @@ export default function StructuralCalculationsPage() {
                       </div>
                     </div>
                   </div>
+
+                  <Button
+                    onClick={addMember}
+                    className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                  >
+                    Add Member to List
+                  </Button>
                 </div>
 
                 <Separator />
