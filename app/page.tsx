@@ -74,6 +74,8 @@ export default function StructuralCalculationsPage() {
   const [connections, setConnections] = useState<Connection[]>([])
   const [connectionCounter, setConnectionCounter] = useState(1)
 
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string>("")
+
   const [boltConfigurations, setBoltConfigurations] = useState<BoltConfiguration[]>([])
   const [boltConfigCounter, setBoltConfigCounter] = useState(1)
 
@@ -123,15 +125,6 @@ export default function StructuralCalculationsPage() {
     my: "0",
     mz: "0",
     directLoad: "150",
-  })
-
-  const [results, setResults] = useState({
-    boltShearCapacity: 188,
-    boltTensileCapacity: 235,
-    weldCapacity: 156,
-    blockShearCapacity: 142,
-    bearingCapacity: 198,
-    utilizationRatio: 0.8,
   })
 
   const handleInputChange = (field: string, value: string) => {
@@ -303,59 +296,34 @@ export default function StructuralCalculationsPage() {
     setConnections((prev) => prev.filter((connection) => connection.id !== id))
   }
 
-  const calculateResults = () => {
-    const selectedGlobalLoads = globalLoads.find((loads) => loads.id === inputs.globalLoadsId)
-    const directLoad = selectedGlobalLoads ? Number.parseFloat(selectedGlobalLoads.directLoad) || 0 : 0
+  const calculateConnectionResults = () => {
+    const selectedConnection = connections.find((conn) => conn.id === selectedConnectionId)
+    if (!selectedConnection) return null
 
-    const selectedBoltConfig = boltConfigurations.find((config) => config.id === inputs.boltConfigurationId)
-    const nBolts = selectedBoltConfig
-      ? (Number.parseFloat(selectedBoltConfig.nRows) || 2) * (Number.parseFloat(selectedBoltConfig.nColumns) || 7)
-      : 14
+    const selectedGlobalLoads = globalLoads.find((loads) => loads.id === selectedConnection.globalLoadsId)
+    const selectedBoltConfig = boltConfigurations.find((config) => config.id === selectedConnection.boltConfigurationId)
 
-    // Sample calculations using user's parameters
-    const d = Number.parseFloat(inputs.boltDiameter) || 0.875
-    const Fu = 400 // A325 bolt ultimate strength (MPa)
-    const Fy = 360 // Yield strength for A992 material (MPa)
-    const t = 0.5 // Plate thickness (in)
-    const gamma_s = 1.25 // Safety factor for shear
-    const gamma_b = 1.25 // Safety factor for bearing
-    const e_eff = 1.0 // Effective eccentricity (in)
-    const U_bs = 0.75 // Block shear factor
-    const A_nv = 0.5 // Net shear area (in^2)
-    const A_nt = 0.5 // Net tension area (in^2)
-    const A_gv = 0.5 // Gross shear area (in^2)
+    if (!selectedGlobalLoads || !selectedBoltConfig) return null
 
-    // Simplified calculations
-    const boltShearCapacity = Math.round((nBolts * 0.6 * Fu * Math.PI * Math.pow(d * 25.4, 2)) / 4 / 2.5 / gamma_s)
-    const boltTensileCapacity = Math.round((nBolts * 0.75 * Fu * A_nv) / gamma_s)
-    const blockShearCapacity = Math.round(
-      Math.min(0.6 * Fu * A_nv + U_bs * Fu * A_nt, 0.6 * Fy * A_gv + U_bs * Fu * A_nt),
-    )
-    const bearingCapacity = Math.round((3.0 * d * t * Fu) / gamma_b)
-    const resultantForce =
-      Math.sqrt(
-        Math.pow(Number.parseFloat(inputs.fx), 2) +
-          Math.pow(Number.parseFloat(inputs.fy), 2) +
-          Math.pow(Number.parseFloat(inputs.fz), 2),
-      ) +
-      Math.sqrt(
-        Math.pow(Number.parseFloat(inputs.mx), 2) +
-          Math.pow(Number.parseFloat(inputs.my), 2) +
-          Math.pow(Number.parseFloat(inputs.mz), 2),
-      ) /
-        e_eff
-    const utilizationRatio =
-      Math.round((directLoad / Math.min(boltShearCapacity, blockShearCapacity, bearingCapacity)) * 100) / 100
+    const directLoad = Number.parseFloat(selectedGlobalLoads.directLoad) || 0
+    const boltDiameter = Number.parseFloat(selectedBoltConfig.boltDiameter) || 0.875
+    const nBolts = Number(selectedBoltConfig.nRows) * Number(selectedBoltConfig.nColumns)
+    const Fu = 65 // ksi for A325 bolts
+    const boltArea = (Math.PI * Math.pow(boltDiameter, 2)) / 4
 
-    setResults({
-      boltShearCapacity,
-      boltTensileCapacity,
-      weldCapacity: 156,
-      blockShearCapacity,
-      bearingCapacity,
-      utilizationRatio,
-    })
+    return {
+      connection: selectedConnection,
+      boltConfig: selectedBoltConfig,
+      loads: selectedGlobalLoads,
+      boltShearCapacity: (nBolts * 0.6 * Fu * boltArea) / 2.0,
+      boltTensileCapacity: (nBolts * 0.75 * Fu * boltArea) / 2.0,
+      appliedLoad: directLoad,
+      utilizationRatio: directLoad / ((nBolts * 0.6 * Fu * boltArea) / 2.0),
+      safetyCheck: directLoad <= (nBolts * 0.6 * Fu * boltArea) / 2.0 ? "SAFE" : "UNSAFE",
+    }
   }
+
+  const results = calculateConnectionResults()
 
   return (
     <div className="min-h-screen bg-background">
@@ -412,6 +380,121 @@ export default function StructuralCalculationsPage() {
                     </Button>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="font-heading font-bold">Connection Analysis</CardTitle>
+            <CardDescription>Select a connection to analyze and view detailed calculations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {connections.length === 0 ? (
+              <div className="text-center py-8 text-muted">
+                <p>No connections available for analysis. Create connections first.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="selectedConnection">Select Connection to Analyze</Label>
+                  <Select value={selectedConnectionId} onValueChange={setSelectedConnectionId}>
+                    <SelectTrigger className="bg-input">
+                      <SelectValue placeholder="Choose a connection for analysis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {connections.map((connection) => (
+                        <SelectItem key={connection.id} value={connection.id}>
+                          {connection.name} ({connection.memberA.name} → {connection.memberB.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {results && (
+                  <div className="space-y-6 p-6 bg-muted/30 rounded-lg border">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-heading font-semibold mb-3">Connection Details</h4>
+                        <div className="space-y-2 text-sm">
+                          <p><strong>Connection:</strong> {results.connection.name}</p>
+                          <p><strong>Member A:</strong> {results.connection.memberA.name} ({results.connection.componentA})</p>
+                          <p><strong>Member B:</strong> {results.connection.memberB.name} ({results.connection.componentB})</p>
+                          <p><strong>Bolt Pattern:</strong> {results.boltConfig.nRows} × {results.boltConfig.nColumns}</p>
+                          <p><strong>Bolt Diameter:</strong> {results.boltConfig.boltDiameter}"</p>
+                          <p><strong>Applied Load:</strong> {results.appliedLoad} kip</p>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-heading font-semibold mb-3">Load Components</h4>
+                        <div className="space-y-2 text-sm">
+                          <p><strong>Fx:</strong> {results.loads.fx} kip</p>
+                          <p><strong>Fy:</strong> {results.loads.fy} kip</p>
+                          <p><strong>Fz:</strong> {results.loads.fz} kip</p>
+                          <p><strong>Mx:</strong> {results.loads.mx} kip-in</p>
+                          <p><strong>My:</strong> {results.loads.my} kip-in</p>
+                          <p><strong>Mz:</strong> {results.loads.mz} kip-in</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-heading font-semibold">Design Calculations</h4>
+                      
+                      <div className="space-y-4">
+                        <div className="p-4 bg-background rounded border">
+                          <h5 className="font-semibold mb-2">Bolt Shear Capacity</h5>
+                          <div className="bg-muted p-3 rounded font-mono text-sm mb-2">
+                            V<sub>r</sub> = n × 0.6 × F<sub>u</sub> × (πd²/4) × (1/γ<sub>s</sub>)
+                          </div>
+                          <p className="text-sm text-muted mb-2">
+                            Where: n = {Number(results.boltConfig.nRows) * Number(results.boltConfig.nColumns)} bolts, F<sub>u</sub> = 65 ksi, d = {results.boltConfig.boltDiameter}", γ<sub>s</sub> = 2.0
+                          </p>
+                          <p className="font-semibold">
+                            V<sub>r</sub> = {results.boltShearCapacity.toFixed(2)} kip
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-background rounded border">
+                          <h5 className="font-semibold mb-2">Bolt Tensile Capacity</h5>
+                          <div className="bg-muted p-3 rounded font-mono text-sm mb-2">
+                            T<sub>r</sub> = n × 0.75 × F<sub>u</sub> × A<sub>s</sub> × (1/γ<sub>s</sub>)
+                          </div>
+                          <p className="text-sm text-muted mb-2">
+                            Where: A<sub>s</sub> = stress area of bolt thread
+                          </p>
+                          <p className="font-semibold">
+                            T<sub>r</sub> = {results.boltTensileCapacity.toFixed(2)} kip
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-background rounded border">
+                          <h5 className="font-semibold mb-2">Safety Assessment</h5>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted">Applied Load:</p>
+                              <p className="font-semibold">{results.appliedLoad.toFixed(2)} kip</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted">Utilization Ratio:</p>
+                              <p className="font-semibold">{(results.utilizationRatio * 100).toFixed(1)}%</p>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <Badge 
+                              variant={results.safetyCheck === "SAFE" ? "default" : "destructive"}
+                              className={results.safetyCheck === "SAFE" ? "bg-green-100 text-green-800 border-green-200" : ""}
+                            >
+                              {results.safetyCheck}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -754,7 +837,7 @@ export default function StructuralCalculationsPage() {
                       value={inputs.fy}
                       onChange={(e) => handleInputChange("fy", e.target.value)}
                       className="bg-input"
-                    />
+                      />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="fz">Fz (kip)</Label>
@@ -1171,7 +1254,6 @@ export default function StructuralCalculationsPage() {
             </Card>
 
             <Button
-              onClick={calculateResults}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Calculate Connection Capacity
@@ -1180,14 +1262,13 @@ export default function StructuralCalculationsPage() {
 
           {/* ... existing results section ... */}
 
-          {/* Results and Formulas */}
-          <div className="space-y-6">
-            {/* Design Formulas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-heading font-bold">Design Formulas</CardTitle>
-                <CardDescription>Limit states design equations for structural connections</CardDescription>
-              </CardHeader>
+          {/* Design Formulas */}
+          {/* Design Formulas section - keeping existing formulas for reference */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="font-heading font-bold">Design Formulas Reference</CardTitle>
+            <CardDescription>Standard structural design formulas for limit states</CardDescription>
+          </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <h4 className="font-heading font-semibold mb-3">Bolt Shear Capacity</h4>
@@ -1249,147 +1330,4 @@ export default function StructuralCalculationsPage() {
                     </div>
                   </div>
                   <p className="text-sm text-muted mt-2">
-                    Where: F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub> = applied forces, M<sub>x</sub>, M<sub>y</sub>, M
-                    <sub>z</sub> = applied moments, e<sub>eff</sub> = effective eccentricity
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-heading font-bold">Calculation Results</CardTitle>
-                <CardDescription>Design capacities and utilization ratios</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Bolt Shear Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {results.boltShearCapacity} kip
-                    </div>
-                  </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Block Shear Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {results.blockShearCapacity} kip
-                    </div>
-                  </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Bearing Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">{results.bearingCapacity} kip</div>
-                  </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Governing Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {Math.min(results.boltShearCapacity, results.blockShearCapacity, results.bearingCapacity)} kip
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-card border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-muted">Utilization Ratio</div>
-                      <div className="text-2xl font-heading font-bold text-foreground">{results.utilizationRatio}</div>
-                    </div>
-                    <div>
-                      {results.utilizationRatio <= 1.0 ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-                          SAFE
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">OVER-STRESSED</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                  <h4 className="font-heading font-semibold text-accent-foreground mb-2">Design Check</h4>
-                  <div className="text-center text-lg font-mono">
-                    P<sub>applied</sub>/P<sub>capacity</sub> = 150/188 = 0.80 ≤ 1.0
-                  </div>
-                  <p className="text-sm text-muted mt-2 text-center">
-                    {results.utilizationRatio <= 1.0
-                      ? "✓ Connection is adequate for the applied load"
-                      : "⚠ Connection capacity exceeded - redesign required"}
-                  </p>
-                </div>
-
-                <div className="bg-muted/10 border rounded-lg p-4">
-                  <h4 className="font-heading font-semibold mb-3">Design Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Member Type:</span>
-                      <span className="font-medium">
-                        {inputs.memberType === "steelpy" ? "Steel Section" : "Custom Plate"}
-                      </span>
-                    </div>
-                    {inputs.memberType === "steelpy" ? (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Section:</span>
-                          <span className="font-medium">{inputs.sectionName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Role:</span>
-                          <span className="font-medium">{inputs.role}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Thickness:</span>
-                          <span className="font-medium">{inputs.thickness}"</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Width:</span>
-                          <span className="font-medium">{inputs.width}"</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Material Grade:</span>
-                      <span className="font-medium">{inputs.material}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Loading Condition:</span>
-                      <span className="font-medium">{inputs.loadingCondition}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bolt Pattern:</span>
-                      <span className="font-medium">
-                        {inputs.nRows} × {inputs.nColumns}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bolt Grade:</span>
-                      <span className="font-medium">{inputs.boltGrade}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Governing Limit State:</span>
-                      <span className="font-medium">
-                        {results.boltShearCapacity <= results.blockShearCapacity &&
-                        results.boltShearCapacity <= results.bearingCapacity
-                          ? "Bolt Shear"
-                          : results.blockShearCapacity <= results.bearingCapacity
-                            ? "Block Shear"
-                            : "Bearing"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Code Reference:</span>
-                      <span className="font-medium">AISC 360-16</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                    Where: F<sub>x</sub>, F<sub>y</sub>\
