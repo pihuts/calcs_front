@@ -1167,215 +1167,320 @@ export default function StructuralCalculationsPage() {
             </Button>
           </div>
 
-          {/* ... existing results section ... */}
-
-          {/* Results and Formulas */}
+          {/* Results and Lists */}
           <div className="space-y-6">
-            {/* Design Formulas */}
             <Card>
               <CardHeader>
-                <CardTitle className="font-heading font-bold">Design Formulas</CardTitle>
-                <CardDescription>Limit states design equations for structural connections</CardDescription>
+                <CardTitle className="font-heading font-bold">Created Members</CardTitle>
+                <CardDescription>List of all created structural members</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h4 className="font-heading font-semibold mb-3">Bolt Shear Capacity</h4>
-                  <div className="bg-muted/20 p-4 rounded-lg border">
-                    <div className="text-center text-lg font-mono">
-                      V<sub>r</sub> = n × 0.6 × F<sub>u</sub> × (πd²/4) × (1/γ<sub>s</sub>)
-                    </div>
+              <CardContent>
+                {members.length === 0 ? (
+                  <p className="text-muted-foreground">No members created yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {members.map((member) => (
+                      <div key={member.id} className="p-3 border rounded-lg bg-muted/50">
+                        <div className="font-medium">{member.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Section: {member.section} | Steel Grade: {member.steelGrade} | 
+                          Ag: {member.Ag} mm² | Fu: {member.Fu} MPa
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-sm text-muted mt-2">
-                    Where: n = number of bolts, F<sub>u</sub> = ultimate tensile strength, d = bolt diameter, γ
-                    <sub>s</sub> = safety factor
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-semibold mb-3">Bolt Tensile Capacity</h4>
-                  <div className="bg-muted/20 p-4 rounded-lg border">
-                    <div className="text-center text-lg font-mono">
-                      T<sub>r</sub> = n × 0.75 × F<sub>u</sub> × A<sub>s</sub> × (1/γ<sub>s</sub>)
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted mt-2">
-                    Where: A<sub>s</sub> = stress area of bolt thread
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-semibold mb-3">Block Shear Capacity</h4>
-                  <div className="bg-muted/20 p-4 rounded-lg border">
-                    <div className="text-center text-lg font-mono">
-                      V<sub>bs</sub> = min(0.6F<sub>u</sub>A<sub>nv</sub> + U<sub>bs</sub>F<sub>u</sub>A<sub>nt</sub>,
-                      0.6F<sub>y</sub>A<sub>gv</sub> + U<sub>bs</sub>F<sub>u</sub>A<sub>nt</sub>)
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted mt-2">
-                    Where: A<sub>nv</sub> = net shear area, A<sub>nt</sub> = net tension area, U<sub>bs</sub> = block
-                    shear factor
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-semibold mb-3">Bearing Capacity</h4>
-                  <div className="bg-muted/20 p-4 rounded-lg border">
-                    <div className="text-center text-lg font-mono">
-                      B<sub>r</sub> = 3.0 × d × t × F<sub>u</sub> × (1/γ<sub>b</sub>)
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted mt-2">
-                    Where: d = bolt diameter, t = plate thickness, γ<sub>b</sub> = bearing resistance factor
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-semibold mb-3">Connection Resultant Force</h4>
-                  <div className="bg-muted/20 p-4 rounded-lg border">
-                    <div className="text-center text-lg font-mono">
-                      P<sub>resultant</sub> = √(F<sub>x</sub>² + F<sub>y</sub>² + F<sub>z</sub>²) + √(M<sub>x</sub>² + M
-                      <sub>y</sub>² + M<sub>z</sub>²)/e<sub>eff</sub>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted mt-2">
-                    Where: F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub> = applied forces, M<sub>x</sub>, M<sub>y</sub>, M
-                    <sub>z</sub> = applied moments, e<sub>eff</sub> = effective eccentricity
-                  </p>
-                </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Results */}
             <Card>
               <CardHeader>
-                <CardTitle className="font-heading font-bold">Calculation Results</CardTitle>
-                <CardDescription>Design capacities and utilization ratios</CardDescription>
+                <CardTitle className="font-heading font-bold">Created Bolt Configurations</CardTitle>
+                <CardDescription>List of all created bolt patterns</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Bolt Shear Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {results.boltShearCapacity} kip
-                    </div>
+              <CardContent>
+                {boltConfigurations.length === 0 ? (
+                  <p className="text-muted-foreground">No bolt configurations created yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {boltConfigurations.map((config) => (
+                      <div key={config.id} className="p-3 border rounded-lg bg-muted/50">
+                        <div className="font-medium">{config.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Pattern: {config.nRows}×{config.nCols} | Diameter: {config.diameter}mm | 
+                          Spacing: {config.spacing}mm | Fu: {config.Fu} MPa
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Block Shear Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {results.blockShearCapacity} kip
-                    </div>
-                  </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Bearing Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">{results.bearingCapacity} kip</div>
-                  </div>
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="text-sm text-muted">Governing Capacity</div>
-                    <div className="text-2xl font-heading font-bold text-foreground">
-                      {Math.min(results.boltShearCapacity, results.blockShearCapacity, results.bearingCapacity)} kip
-                    </div>
-                  </div>
-                </div>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="bg-card border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-muted">Utilization Ratio</div>
-                      <div className="text-2xl font-heading font-bold text-foreground">{results.utilizationRatio}</div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-heading font-bold">Created Global Loads</CardTitle>
+                <CardDescription>List of all created load cases</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {globalLoads.length === 0 ? (
+                  <p className="text-muted-foreground">No global loads created yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {globalLoads.map((loads) => (
+                      <div key={loads.id} className="p-3 border rounded-lg bg-muted/50">
+                        <div className="font-medium">{loads.name}</div>
+                        <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
+                          <div>Fx: {loads.Fx} kN</div>
+                          <div>Fy: {loads.Fy} kN</div>
+                          <div>Fz: {loads.Fz} kN</div>
+                          <div>Mx: {loads.Mx} kN⋅m</div>
+                          <div>My: {loads.My} kN⋅m</div>
+                          <div>Mz: {loads.Mz} kN⋅m</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-heading font-bold">Created Connections</CardTitle>
+                <CardDescription>List of all created connections</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {connections.length === 0 ? (
+                  <p className="text-muted-foreground">No connections created yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {connections.map((connection) => (
+                      <div key={connection.id} className="p-3 border rounded-lg bg-muted/50">
+                        <div className="font-medium">{connection.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Members: {connection.memberA.name} → {connection.memberB.name} | 
+                          Components: {connection.componentA} → {connection.componentB}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Bolt Config: {connection.boltConfiguration.name} | 
+                          Load Case: {connection.globalLoads.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Existing calculation results section */}
+            {results && (
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading font-bold">Design Formulas</CardTitle>
+                  <CardDescription>Limit states design equations for structural connections</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="font-heading font-semibold mb-3">Bolt Shear Capacity</h4>
+                    <div className="bg-muted/20 p-4 rounded-lg border">
+                      <div className="text-center text-lg font-mono">
+                        V<sub>r</sub> = n × 0.6 × F<sub>u</sub> × (πd²/4) × (1/γ<sub>s</sub>)
+                      </div>
                     </div>
-                    <div>
-                      {results.utilizationRatio <= 1.0 ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-                          SAFE
-                        </Badge>
+                    <p className="text-sm text-muted mt-2">
+                      Where: n = number of bolts, F<sub>u</sub> = ultimate tensile strength, d = bolt diameter, γ
+                      <sub>s</sub> = safety factor
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-semibold mb-3">Bolt Tensile Capacity</h4>
+                    <div className="bg-muted/20 p-4 rounded-lg border">
+                      <div className="text-center text-lg font-mono">
+                        T<sub>r</sub> = n × 0.75 × F<sub>u</sub> × A<sub>s</sub> × (1/γ<sub>s</sub>)
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted mt-2">
+                      Where: A<sub>s</sub> = stress area of bolt thread
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-semibold mb-3">Block Shear Capacity</h4>
+                    <div className="bg-muted/20 p-4 rounded-lg border">
+                      <div className="text-center text-lg font-mono">
+                        V<sub>bs</sub> = min(0.6F<sub>u</sub>A<sub>nv</sub> + U<sub>bs</sub>F<sub>u</sub>A<sub>nt</sub>,
+                        0.6F<sub>y</sub>A<sub>gv</sub> + U<sub>bs</sub>F<sub>u</sub>A<sub>nt</sub>)
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted mt-2">
+                      Where: A<sub>nv</sub> = net shear area, A<sub>nt</sub> = net tension area, U<sub>bs</sub> = block
+                      shear factor
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-semibold mb-3">Bearing Capacity</h4>
+                    <div className="bg-muted/20 p-4 rounded-lg border">
+                      <div className="text-center text-lg font-mono">
+                        B<sub>r</sub> = 3.0 × d × t × F<sub>u</sub> × (1/γ<sub>b</sub>)
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted mt-2">
+                      Where: d = bolt diameter, t = plate thickness, γ<sub>b</sub> = bearing resistance factor
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-semibold mb-3">Connection Resultant Force</h4>
+                    <div className="bg-muted/20 p-4 rounded-lg border">
+                      <div className="text-center text-lg font-mono">
+                        P<sub>resultant</sub> = √(F<sub>x</sub>² + F<sub>y</sub>² + F<sub>z</sub>²) + √(M<sub>x</sub>² + M
+                        <sub>y</sub>² + M<sub>z</sub>²)/e<sub>eff</sub>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted mt-2">
+                      Where: F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub> = applied forces, M<sub>x</sub>, M<sub>y</sub>, M
+                      <sub>z</sub> = applied moments, e<sub>eff</sub> = effective eccentricity
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Results */}
+              <Card>\
+                <CardHeader>
+                  <CardTitle className="font-heading font-bold">Calculation Results</CardTitle>
+                  <CardDescription>Design capacities and utilization ratios</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-card border rounded-lg p-4">
+                      <div className="text-sm text-muted">Bolt Shear Capacity</div>
+                      <div className="text-2xl font-heading font-bold text-foreground">
+                        {results.boltShearCapacity} kip
+                      </div>
+                    </div>
+                    <div className="bg-card border rounded-lg p-4">
+                      <div className="text-sm text-muted">Block Shear Capacity</div>
+                      <div className="text-2xl font-heading font-bold text-foreground">
+                        {results.blockShearCapacity} kip
+                      </div>
+                    </div>
+                    <div className="bg-card border rounded-lg p-4">
+                      <div className="text-sm text-muted">Bearing Capacity</div>
+                      <div className="text-2xl font-heading font-bold text-foreground">{results.bearingCapacity} kip</div>
+                    </div>
+                    <div className="bg-card border rounded-lg p-4">
+                      <div className="text-sm text-muted">Governing Capacity</div>
+                      <div className="text-2xl font-heading font-bold text-foreground">
+                        {Math.min(results.boltShearCapacity, results.blockShearCapacity, results.bearingCapacity)} kip
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-card border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-muted">Utilization Ratio</div>
+                        <div className="text-2xl font-heading font-bold text-foreground">{results.utilizationRatio}</div>
+                      </div>
+                      <div>
+                        {results.utilizationRatio <= 1.0 ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+                            SAFE
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">OVER-STRESSED</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                    <h4 className="font-heading font-semibold text-accent-foreground mb-2">Design Check</h4>
+                    <div className="text-center text-lg font-mono">
+                      P<sub>applied</sub>/P<sub>capacity</sub> = 150/188 = 0.80 ≤ 1.0
+                    </div>
+                    <p className="text-sm text-muted mt-2 text-center">
+                      {results.utilizationRatio <= 1.0
+                        ? "✓ Connection is adequate for the applied load"
+                        : "⚠ Connection capacity exceeded - redesign required"}
+                    </p>
+                  </div>
+
+                  <div className="bg-muted/10 border rounded-lg p-4">
+                    <h4 className="font-heading font-semibold mb-3">Design Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Member Type:</span>
+                        <span className="font-medium">
+                          {inputs.memberType === "steelpy" ? "Steel Section" : "Custom Plate"}
+                        </span>
+                      </div>
+                      {inputs.memberType === "steelpy" ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Section:</span>
+                            <span className="font-medium">{inputs.sectionName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Role:</span>
+                            <span className="font-medium">{inputs.role}</span>
+                          </div>
+                        </>
                       ) : (
-                        <Badge variant="destructive">OVER-STRESSED</Badge>
+                        <>
+                          <div className="flex justify-between">
+                            <span>Thickness:</span>
+                            <span className="font-medium">{inputs.thickness}"</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Width:</span>
+                            <span className="font-medium">{inputs.width}"</span>
+                          </div>
+                        </>
                       )}
+                      <div className="flex justify-between">
+                        <span>Material Grade:</span>
+                        <span className="font-medium">{inputs.material}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Loading Condition:</span>
+                        <span className="font-medium">{inputs.loadingCondition}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Bolt Pattern:</span>
+                        <span className="font-medium">
+                          {inputs.nRows} × {inputs.nColumns}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Bolt Grade:</span>
+                        <span className="font-medium">{inputs.boltGrade}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Governing Limit State:</span>
+                        <span className="font-medium">
+                          {results.boltShearCapacity <= results.blockShearCapacity &&
+                          results.boltShearCapacity <= results.bearingCapacity
+                            ? "Bolt Shear"
+                            : results.blockShearCapacity <= results.bearingCapacity
+                              ? "Block Shear"
+                              : "Bearing"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Code Reference:</span>
+                        <span className="font-medium">AISC 360-16</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                  <h4 className="font-heading font-semibold text-accent-foreground mb-2">Design Check</h4>
-                  <div className="text-center text-lg font-mono">
-                    P<sub>applied</sub>/P<sub>capacity</sub> = 150/188 = 0.80 ≤ 1.0
-                  </div>
-                  <p className="text-sm text-muted mt-2 text-center">
-                    {results.utilizationRatio <= 1.0
-                      ? "✓ Connection is adequate for the applied load"
-                      : "⚠ Connection capacity exceeded - redesign required"}
-                  </p>
-                </div>
-
-                <div className="bg-muted/10 border rounded-lg p-4">
-                  <h4 className="font-heading font-semibold mb-3">Design Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Member Type:</span>
-                      <span className="font-medium">
-                        {inputs.memberType === "steelpy" ? "Steel Section" : "Custom Plate"}
-                      </span>
-                    </div>
-                    {inputs.memberType === "steelpy" ? (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Section:</span>
-                          <span className="font-medium">{inputs.sectionName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Role:</span>
-                          <span className="font-medium">{inputs.role}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Thickness:</span>
-                          <span className="font-medium">{inputs.thickness}"</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Width:</span>
-                          <span className="font-medium">{inputs.width}"</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Material Grade:</span>
-                      <span className="font-medium">{inputs.material}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Loading Condition:</span>
-                      <span className="font-medium">{inputs.loadingCondition}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bolt Pattern:</span>
-                      <span className="font-medium">
-                        {inputs.nRows} × {inputs.nColumns}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bolt Grade:</span>
-                      <span className="font-medium">{inputs.boltGrade}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Governing Limit State:</span>
-                      <span className="font-medium">
-                        {results.boltShearCapacity <= results.blockShearCapacity &&
-                        results.boltShearCapacity <= results.bearingCapacity
-                          ? "Bolt Shear"
-                          : results.blockShearCapacity <= results.bearingCapacity
-                            ? "Block Shear"
-                            : "Bearing"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Code Reference:</span>
-                      <span className="font-medium">AISC 360-16</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
